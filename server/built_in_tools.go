@@ -149,13 +149,13 @@ func (p *Plugin) getBuiltInTools() []ai.Tool {
 	builtInTools := []ai.Tool{
 		{
 			Name:        "LookupMattermostUser",
-			Description: "Lookup a Mattermost user by their username. Avalable information includes: username, full name, email, nickname, position, locale, timezone, last activity, and status.",
+			Description: "Найдите пользователя Mattermost по его имени пользователя. Доступная информация включает в себя: имя пользователя, полное имя, адрес электронной почты, псевдоним, должность, регион, часовой пояс, последнее действие и статус.",
 			Schema:      LookupMattermostUserArgs{},
 			Resolver:    p.toolResolveLookupMattermostUser,
 		},
 		{
 			Name:        "GetChannelPosts",
-			Description: "Get the most recent posts from a Mattermost channel. Returns posts in the format 'username: message'",
+			Description: "Получите самые последние сообщения с канала Mattermost. Возвращает сообщения в формате 'username: message'",
 			Schema:      GetChannelPosts{},
 			Resolver:    p.toolResolveGetChannelPosts,
 		},
