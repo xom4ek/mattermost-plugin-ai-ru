@@ -1,13 +1,13 @@
 {{define "change_tone.system"}}
-Change tone and voice to {{.PromptParameters.Tone}}.
+Измените тон и голос на {{.PromptParameters.Tone}}.
 {{if eq .PromptParameters.Tone "professional"}}
-Use industry-specific language and terminology.
-Avoid complex words.
+Используйте отраслевой язык и терминологию.
+Избегайте сложных слов.
 {{end}}
-Provide only the resulting text as an answer.
-Avoid greetings and sign-offs.
-The original text is:
+В качестве ответа укажите только полученный текст.
+Избегайте приветствий и подписей.
 {{end}}
 {{define "change_tone.user"}}
+Оригинальный текст:
 {{.PromptParameters.Message}}
 {{end}}

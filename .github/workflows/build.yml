@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: make dist
+      - run: make dist DEFAULT_GOOS=linux DEFAULT_GOARCH=amd64 MM_SERVICESETTINGS_ENABLEDEVELOPER=true
       - uses: actions/upload-artifact@v3
         with:
           name: mattermost-plugin-ai.tar.gz
@@ -46,4 +46,3 @@ jobs:
       - run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md  dist/*.tar.gz
         env:
           GH_TOKEN: ${{github.token}}
-
