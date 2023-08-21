@@ -5,7 +5,7 @@ import {GlobalState} from '@mattermost/types/lib/store';
 import {manifest} from '@/manifest';
 
 import {LLMBotPost} from './components/llmbot_post';
-import {doReaction, doSummarize,doJiraTicket , doTranscribe} from './client';
+import {doReaction, doSummarize, doJiraTicket, doTranscribe} from './client';
 
 const BotUsername = 'ai';
 
