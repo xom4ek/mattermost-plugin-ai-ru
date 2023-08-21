@@ -129,6 +129,28 @@ func (p *Plugin) continueThreadConversation(questionThreadData *ThreadData, orig
 	return result, nil
 }
 
+func (p *Plugin) continueJiraConversation(questionJiraData *ThreadData, originalThreadID string, context ai.ConversationContext) (*ai.TextStreamResult, error) {
+	originalThreadData, err := p.getThreadAndMeta(originalThreadID)
+	if err != nil {
+		return nil, err
+	}
+	originalThread := formatThread(originalThreadData)
+
+	context.PromptParameters = map[string]string{"Thread": originalThread}
+	prompt, err := p.prompts.ChatCompletion(ai.PromptJiraTicket, context)
+	if err != nil {
+		return nil, err
+	}
+	prompt.AppendConversation(ai.ThreadToBotConversation(p.botid, questionJiraData.Posts))
+
+	result, err := p.getLLM().ChatCompletion(prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 const ThreadIDProp = "referenced_thread"
 
 // DM the user with a standard message. Run the inferance
@@ -161,6 +183,37 @@ func (p *Plugin) startNewSummaryThread(postIDToSummarize string, context ai.Conv
 
 	return post.Id, nil
 }
+
+func (p *Plugin) startNewJiraTicket(postIDToJiraTicket string, context ai.ConversationContext) (string, error) {
+	threadData, err := p.getThreadAndMeta(postIDToJiraTicket)
+	if err != nil {
+		return "", err
+	}
+
+	formattedThread := formatThread(threadData)
+
+	context.PromptParameters = map[string]string{"Thread": formattedThread}
+	prompt, err := p.prompts.ChatCompletion(ai.PromptJiraTicket, context)
+	if err != nil {
+		return "", err
+	}
+	summaryStream, err := p.getLLM().ChatCompletion(prompt)
+	if err != nil {
+		return "", err
+	}
+
+	post := &model.Post{
+		Message: fmt.Sprintf("Jira ticket [для этого треда](/_redirect/pl/%s):\n", postIDToJiraTicket),
+	}
+	post.AddProp(ThreadIDProp, postIDToJiraTicket)
+
+	if err := p.streamResultToNewDM(summaryStream, context.RequestingUser.Id, post); err != nil {
+		return "", err
+	}
+
+	return post.Id, nil
+}
+
 
 func (p *Plugin) selectEmoji(postToReact *model.Post, context ai.ConversationContext) error {
 	context.PromptParameters = map[string]string{"Message": postToReact.Message}

@@ -19,6 +19,7 @@ const UserSubTemplateName = ".user"
 
 // Conviance vars for the filenames in ai/prompts/
 const (
+	PromptJiraTicket            = "jira_ticket"
 	PromptSummarizeThread       = "summarize_thread"
 	PromptDirectMessageQuestion = "direct_message_question"
 	PromptEmojiSelect           = "emoji_select"

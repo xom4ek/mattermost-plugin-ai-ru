@@ -19,6 +19,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 	router.POST("/feedback/post/:postid/positive", p.handlePositivePostFeedback)
 	router.POST("/feedback/post/:postid/negative", p.handleNegativePostFeedback)
 	router.POST("/summarize/post/:postid", p.handleSummarize)
+	router.POST("/jiraticket/post/:postid", p.handleJiraTicket)
 	router.POST("/transcribe/:postid", p.handleTranscribe)
 	router.GET("/feedback", p.handleGetFeedback)
 	router.ServeHTTP(w, r)
@@ -202,6 +203,41 @@ func (p *Plugin) handleSummarize(c *gin.Context) {
 
 	if _, err := p.startNewSummaryThread(postID, p.MakeConversationContext(user, channel, nil)); err != nil {
 		c.AbortWithError(http.StatusInternalServerError, errors.Wrap(err, "Unable to produce summary"))
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (p *Plugin) handleJiraTicket(c *gin.Context) {
+	postID := c.Param("postid")
+	userID := c.GetHeader("Mattermost-User-Id")
+
+	post, err := p.pluginAPI.Post.GetPost(postID)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	channel, err := p.pluginAPI.Channel.Get(post.ChannelId)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	user, err := p.pluginAPI.User.Get(userID)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if err := p.checkUsageRestrictions(userID, channel); err != nil {
+		c.AbortWithError(http.StatusForbidden, err)
+		return
+	}
+
+	if _, err := p.startNewJiraTicket(postID, p.MakeConversationContext(user, channel, nil)); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, errors.Wrap(err, "Unable to produce jira ticket"))
 		return
 	}
 

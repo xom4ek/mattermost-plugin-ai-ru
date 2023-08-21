@@ -21,6 +21,14 @@ func (p *Plugin) registerCommands() {
 	})
 
 	p.API.RegisterCommand(&model.Command{
+		Trigger:          "jiraticket",
+		DisplayName:      "jiraticket",
+		Description:      "jiraticket current context",
+		AutoComplete:     true,
+		AutoCompleteDesc: "jiraticket current context",
+	})
+
+	p.API.RegisterCommand(&model.Command{
 		Trigger:          "imagine",
 		DisplayName:      "Imagine",
 		Description:      "Generate a new image based on the provided text",
@@ -53,7 +61,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	split := strings.SplitN(strings.TrimSpace(args.Command), " ", 2)
 	command := split[0]
 
-	if command != "/summarize" && command != "/imagine" && command != "/spellcheck" && command != "/change_tone" {
+	if command != "/summarize" && command != "/imagine" && command != "/spellcheck" && command != "/change_tone" && command != "/jiraticket" {
 		return &model.CommandResponse{}, nil
 	}
 
@@ -88,6 +96,17 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		var response *model.CommandResponse
 		var err error
 		response, err = p.summarizeCurrentContext(c, args, context)
+
+		if err != nil {
+			return nil, model.NewAppError("Summarize.ExecuteCommand", "app.command.execute.error", nil, err.Error(), http.StatusInternalServerError)
+		}
+		return response, nil
+	}
+
+	if command == "/jiraticket" {
+		var response *model.CommandResponse
+		var err error
+		response, err = p.jiraTicketCurrentContext(c, args, context)
 
 		if err != nil {
 			return nil, model.NewAppError("Summarize.ExecuteCommand", "app.command.execute.error", nil, err.Error(), http.StatusInternalServerError)
@@ -140,6 +159,24 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 func (p *Plugin) summarizeCurrentContext(c *plugin.Context, args *model.CommandArgs, context ai.ConversationContext) (*model.CommandResponse, error) {
 	if args.RootId != "" {
 		postid, err := p.startNewSummaryThread(args.RootId, context)
+		if err != nil {
+			return nil, err
+		}
+		return &model.CommandResponse{
+			GotoLocation: "/_redirect/pl/" + postid,
+		}, nil
+	}
+
+	return &model.CommandResponse{
+		ResponseType: model.CommandResponseTypeEphemeral,
+		Text:         "Channel summarization not implmented",
+		ChannelId:    args.ChannelId,
+	}, nil
+}
+
+func (p *Plugin) jiraTicketCurrentContext(c *plugin.Context, args *model.CommandArgs, context ai.ConversationContext) (*model.CommandResponse, error) {
+	if args.RootId != "" {
+		postid, err := p.startNewJiraTicket(args.RootId, context)
 		if err != nil {
 			return nil, err
 		}

@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - test-ru
     tags:
       - v*
   pull_request:
