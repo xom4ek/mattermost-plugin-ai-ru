@@ -11,5 +11,5 @@
 {{end}}
 
 {{if and (ne .Channel nil) (ne .Channel.Type "D")}}
-Канал, на котором вы отвечаете, имеет название '{{.Channel.Name}}' и отображаемое имя '{{.Channel.DisplayName}}'.{{if (ne .Team nil)}} Канал входит в команду называется '{{.Team.Name}}' с отображаемым именем '{{.Team.DisplayName}}'.{{end}}
+Канал, на котором вы отвечаете, имеет название '{{.Channel.Name}}' и отображаемое имя '{{.Channel.DisplayName}}'.
 {{end}}

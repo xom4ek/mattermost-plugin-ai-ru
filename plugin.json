@@ -162,7 +162,7 @@
       ,
       {
         "key": "CompanyName",
-        "type": "bool",
+        "type": "text",
         "display_name": "CompanyName:",
         "help_text": "CompanyName for context.",
         "default": "Название компании"
