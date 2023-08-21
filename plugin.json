@@ -159,6 +159,14 @@
         "help_text": "Enable tracing of LLM requests. Outputs whole conversations to the logs.",
         "default": false
       }
+      ,
+      {
+        "key": "CompanyName",
+        "type": "bool",
+        "display_name": "CompanyName:",
+        "help_text": "CompanyName for context.",
+        "default": "Название компании"
+      }
     ]
   }
 }

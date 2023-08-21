@@ -187,7 +187,7 @@ func (p *Plugin) jiraTicketCurrentContext(c *plugin.Context, args *model.Command
 
 	return &model.CommandResponse{
 		ResponseType: model.CommandResponseTypeEphemeral,
-		Text:         "Channel summarization not implmented",
+		Text:         "Channel jiraticket not implmented",
 		ChannelId:    args.ChannelId,
 	}, nil
 }

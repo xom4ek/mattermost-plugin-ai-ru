@@ -201,7 +201,6 @@ func (p *Plugin) startNewJiraTicket(postIDToJiraTicket string, context ai.Conver
 	if err != nil {
 		return "", err
 	}
-
 	post := &model.Post{
 		Message: fmt.Sprintf("Jira ticket [для этого треда](/_redirect/pl/%s):\n", postIDToJiraTicket),
 	}

@@ -13,6 +13,8 @@ func (p *Plugin) MakeConversationContext(user *model.User, channel *model.Channe
 
 	if license := p.pluginAPI.System.GetLicense(); license != nil && license.Customer != nil {
 		context.CompanyName = license.Customer.Company
+	} else {
+		context.CompanyName = p.getConfiguration().CompanyName
 	}
 
 	if channel != nil {

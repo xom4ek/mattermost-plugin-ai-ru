@@ -43,6 +43,7 @@ type configuration struct {
 	OnlyUsersOnTeam       string
 
 	EnableLLMTrace bool
+	CompanyName string
 }
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
