@@ -6,34 +6,36 @@
 
 # Table of Contents
 
-- [Background](#background)
-- [Install Mattermost + `mattermost-plugin-ai`](#install-mattermost--mattermost-plugin-ai)
-  - [On existing Mattermost server](#on-existing-mattermost-server)
-  - [Local Development](#local-development)
-  - [Gitpod Demo](#gitpod-demo)
-- [Usage](#usage)
-  - [Streaming Conversation](#streaming-conversation)
-  - [Thread Summarization](#thread-summarization)
-  - [Answer questions about Threads](#answer-questions-about-threads)
-  - [Chat anywhere](#chat-anywhere)
-  - [Create meeting summary](#create-meeting-summary)
-  - [Personalisation](#personalisation)
-  - [User lookup (OpenAI exclusive)](#user-lookup-openai-exclusive)
-  - [Channel posts lookup (OpenAI exclusive)](#channel-posts-lookup-openai-exclusive)
-  - [GitHub integration (OpenAI exclusive, requires GitHub plugin)](#github-integration-openai-exclusive-requires-github-plugin)
-  - [React for me](#react-for-me)
-  - [RLHF Feedback Collection](#rlhf-feedback-collection)
-- [Supported Backends](#supported-backends)
-  - [OpenAI (recommended)](#openai-recommended)
-  - [Anthropic](#anthropic)
-  - [Azure OpenAI](#azure-openai)
-  - [OpenAI Compatable](#openai-compatable)
-  - [Ask Sage](#ask-sage)
-- [Community Resources](#community-resources)
-  - [AI](#ai)
-  - [Mattermost](#mattermost)
-- [Contributing](#contributing)
-- [License](#license)
+- [Mattermost AI Plugin](#mattermost-ai-plugin)
+- [Table of Contents](#table-of-contents)
+  - [Background](#background)
+  - [Install Mattermost + `mattermost-plugin-ai`](#install-mattermost--mattermost-plugin-ai)
+    - [On existing Mattermost server](#on-existing-mattermost-server)
+    - [Local Development](#local-development)
+    - [Gitpod Demo](#gitpod-demo)
+  - [Usage](#usage)
+    - [Streaming Conversation](#streaming-conversation)
+    - [Thread Summarization](#thread-summarization)
+    - [Answer questions about Threads](#answer-questions-about-threads)
+    - [Chat anywhere](#chat-anywhere)
+    - [Create meeting summary](#create-meeting-summary)
+    - [Personalisation](#personalisation)
+    - [User lookup (OpenAI exclusive)](#user-lookup-openai-exclusive)
+    - [Channel posts lookup (OpenAI exclusive)](#channel-posts-lookup-openai-exclusive)
+    - [GitHub integration (OpenAI exclusive, requires GitHub plugin)](#github-integration-openai-exclusive-requires-github-plugin)
+    - [React for me](#react-for-me)
+    - [RLHF Feedback Collection](#rlhf-feedback-collection)
+  - [Supported Backends](#supported-backends)
+    - [OpenAI (recommended)](#openai-recommended)
+    - [Anthropic](#anthropic)
+    - [Azure OpenAI](#azure-openai)
+    - [OpenAI Compatable](#openai-compatable)
+    - [Ask Sage](#ask-sage)
+  - [Community Resources](#community-resources)
+    - [AI](#ai)
+    - [Mattermost](#mattermost)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Background
 
@@ -162,9 +164,11 @@ Configure the API key and the endpoint url for OpenAI Compatible in the system c
 Can support any backend that is OpenAI compatable such as [LocalAI](https://github.com/go-skynet/LocalAI) which we use in the [OpenOps](https://github.com/mattermost/openops) demo.
 
 ### Ask Sage
-If you can to use the OpenAI api directly, it is recommended you do that. Ask Sage does not support response streaming leading to a worse user experience. API tokens have not been implemented by Ask Sage therefore the Ask Sage integration requires username and password stored in plaintext in the server configuration. Hopefully these limitations will be resolved.
+Ask Sage is currently supported as an experimental stage feature. Token-based security is not yet available via the Ask Sage API, and server configuration would require securing the Mattermost server configuration data store, which will contain username and password in plaintext. 
 
-To configure enter your username and password on the system console page and set the default model such as `gpt-4` or `gpt-3.5-turbo`.
+To configure, you need to purchase a commercial account from [https://asksage.ai](https://asksage.ai), enter the account's `username` and `password` on the System Console page and set the default model such as `gpt-4` or `gpt-3.5-turbo`. 
+
+The Ask Sage API doesn't yet support streaming, so there is less feedback to Mattermost users on intermediate information. 
 
 ## Community Resources 
 
@@ -180,7 +184,7 @@ To configure enter your username and password on the system console page and set
 
 ## Contributing
 
-Thank you for your interest in contributing to our open source project! ❤️ To get started, please read the [contributor guidelines](./CONTRIBUTING.md) for this repository.
+Thank you for your interest in contributing to our open source project! ❤️ To get started, please read the [contributor guidelines](./CONTRIBUTING.md) for this repository and check out the [Help Wanted ticket list](https://github.com/mattermost/mattermost-plugin-ai/labels/help%20wanted). 
 
 ## License
 

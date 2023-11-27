@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/mattermost/mattermost-plugin-ai/server/ai"
-	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/pkg/errors"
 )
 
 const (
-	WhisperAPILimit           = 25 * (1024 * 1024) // 25 MB
+	WhisperAPILimit           = 25 * 1000 * 1000 // 25 MB
+	ContextTokenMargin        = 1000
 	defaultSpellcheckLanguage = "English"
 )
 
@@ -40,8 +40,34 @@ func (p *Plugin) newConversation(context ai.ConversationContext) error {
 		ChannelId: context.Channel.Id,
 		RootId:    context.Post.Id,
 	}
-	if err := p.streamResultToNewPost(result, responsePost); err != nil {
+	if err := p.streamResultToNewPost(context.RequestingUser.Id, result, responsePost); err != nil {
 		return err
+	}
+
+	go func() {
+		if err := p.generateTitle(context); err != nil {
+			p.API.LogError("Failed to generate title", "error", err.Error())
+			return
+		}
+	}()
+
+	return nil
+}
+
+func (p *Plugin) generateTitle(context ai.ConversationContext) error {
+	titleRequest := ai.BotConversation{
+		Posts:   []ai.Post{{Role: ai.PostRoleUser, Message: "Write a short title for the following request. Include only the title and nothing else, no quotations. Request:\n" + context.Post.Message}},
+		Context: context,
+	}
+	conversationTitle, err := p.getLLM().ChatCompletionNoStream(titleRequest, ai.WithmaxTokens(25))
+	if err != nil {
+		return errors.Wrap(err, "failed to get title")
+	}
+
+	conversationTitle = strings.Trim(conversationTitle, "\n \"'")
+
+	if err := p.saveTitle(context.Post.Id, conversationTitle); err != nil {
+		return errors.Wrap(err, "failed to save title")
 	}
 
 	return nil
@@ -53,7 +79,7 @@ func (p *Plugin) continueConversation(context ai.ConversationContext) error {
 		return err
 	}
 
-	// Special handing for threads started by the bot in responce to a summarization request.
+	// Special handing for threads started by the bot in response to a summarization request.
 	var result *ai.TextStreamResult
 	originalThreadID, ok := threadData.Posts[0].GetProp(ThreadIDProp).(string)
 	if ok && originalThreadID != "" {
@@ -73,7 +99,7 @@ func (p *Plugin) continueConversation(context ai.ConversationContext) error {
 				RootId:    context.Post.RootId,
 				Message:   "Sorry, you no longer have access to the original thread.",
 			}
-			if err := p.botCreatePost(responsePost); err != nil {
+			if err := p.botCreatePost(context.RequestingUser.Id, responsePost); err != nil {
 				return err
 			}
 			return nil
@@ -100,7 +126,7 @@ func (p *Plugin) continueConversation(context ai.ConversationContext) error {
 		ChannelId: context.Channel.Id,
 		RootId:    context.Post.RootId,
 	}
-	if err := p.streamResultToNewPost(result, responsePost); err != nil {
+	if err := p.streamResultToNewPost(context.RequestingUser.Id, result, responsePost); err != nil {
 		return err
 	}
 
@@ -154,10 +180,10 @@ func (p *Plugin) continueJiraConversation(questionJiraData *ThreadData, original
 const ThreadIDProp = "referenced_thread"
 
 // DM the user with a standard message. Run the inferance
-func (p *Plugin) startNewSummaryThread(postIDToSummarize string, context ai.ConversationContext) (string, error) {
+func (p *Plugin) startNewSummaryThread(postIDToSummarize string, context ai.ConversationContext) (*model.Post, error) {
 	threadData, err := p.getThreadAndMeta(postIDToSummarize)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	formattedThread := formatThread(threadData)
@@ -165,11 +191,11 @@ func (p *Plugin) startNewSummaryThread(postIDToSummarize string, context ai.Conv
 	context.PromptParameters = map[string]string{"Thread": formattedThread}
 	prompt, err := p.prompts.ChatCompletion(ai.PromptSummarizeThread, context)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	summaryStream, err := p.getLLM().ChatCompletion(prompt)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	post := &model.Post{
@@ -178,41 +204,42 @@ func (p *Plugin) startNewSummaryThread(postIDToSummarize string, context ai.Conv
 	post.AddProp(ThreadIDProp, postIDToSummarize)
 
 	if err := p.streamResultToNewDM(summaryStream, context.RequestingUser.Id, post); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return post.Id, nil
+	return post, nil
 }
 
-func (p *Plugin) startNewJiraTicket(postIDToJiraTicket string, context ai.ConversationContext) (string, error) {
+
+func (p *Plugin) startNewJiraTicket(postIDToJiraTicket string, context ai.ConversationContext) (*model.Post, error) {
 	threadData, err := p.getThreadAndMeta(postIDToJiraTicket)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	formattedThread := formatThread(threadData)
 
 	context.PromptParameters = map[string]string{"Thread": formattedThread}
-	prompt, err := p.prompts.ChatCompletion(ai.PromptJiraTicket, context)
+	prompt, err := p.prompts.ChatCompletion(ai.PromptSummarizeThread, context)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	summaryStream, err := p.getLLM().ChatCompletion(prompt)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+
 	post := &model.Post{
-		Message: fmt.Sprintf("Jira ticket [для этого треда](/_redirect/pl/%s):\n", postIDToJiraTicket),
+		Message: fmt.Sprintf("Jira ticket for [this thread](/_redirect/pl/%s):\n", postIDToJiraTicket),
 	}
 	post.AddProp(ThreadIDProp, postIDToJiraTicket)
 
 	if err := p.streamResultToNewDM(summaryStream, context.RequestingUser.Id, post); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return post.Id, nil
+	return post, nil
 }
-
 
 func (p *Plugin) selectEmoji(postToReact *model.Post, context ai.ConversationContext) error {
 	context.PromptParameters = map[string]string{"Message": postToReact.Message}
@@ -221,12 +248,12 @@ func (p *Plugin) selectEmoji(postToReact *model.Post, context ai.ConversationCon
 		return err
 	}
 
-	emojiName, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithmaxTokens(25))
+	emojiName, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithMaxTokens(25))
 	if err != nil {
 		return err
 	}
 
-	// Do some emoji post processing to hopfully make this an actual emoji.
+	// Do some emoji post processing to hopefully make this an actual emoji.
 	emojiName = strings.Trim(strings.TrimSpace(emojiName), ":")
 
 	if _, found := model.GetSystemEmojiId(emojiName); !found {
@@ -249,125 +276,6 @@ func (p *Plugin) selectEmoji(postToReact *model.Post, context ai.ConversationCon
 	return nil
 }
 
-func (p *Plugin) handleCallRecordingPost(recordingPost *model.Post, channel *model.Channel) (err error) {
-	if len(recordingPost.FileIds) != 1 {
-		return errors.New("Unexpected number of files in calls post")
-	}
-
-	if p.ffmpegPath == "" {
-		return errors.New("ffmpeg not installed")
-	}
-
-	rootId := recordingPost.Id
-	if recordingPost.RootId != "" {
-		rootId = recordingPost.RootId
-	}
-
-	botPost := &model.Post{
-		ChannelId: recordingPost.ChannelId,
-		RootId:    rootId,
-		Message:   "Transcribing meeting...",
-	}
-	if err := p.botCreatePost(botPost); err != nil {
-		return err
-	}
-
-	// Update to an error if we return one.
-	defer func() {
-		if err != nil {
-			botPost.Message = "Sorry! Somthing went wrong. Check the server logs for details."
-			if err := p.pluginAPI.Post.UpdatePost(botPost); err != nil {
-				p.API.LogError("Failed to update post in error handling handleCallRecordingPost", "error", err)
-			}
-		}
-	}()
-
-	fileID := recordingPost.FileIds[0]
-	fileReader, err := p.pluginAPI.File.Get(fileID)
-	if err != nil {
-		return errors.Wrap(err, "unable to read calls file")
-	}
-
-	cmd := exec.Command(p.ffmpegPath, "-i", "pipe:0", "-f", "mp3", "pipe:1")
-	cmd.Stdin = fileReader
-
-	audioReader, err := cmd.StdoutPipe()
-	if err != nil {
-		return errors.Wrap(err, "couldn't create stdout pipe")
-	}
-
-	errorReader, err := cmd.StderrPipe()
-	if err != nil {
-		return errors.Wrap(err, "couldn't create stderr pipe")
-	}
-
-	if err := cmd.Start(); err != nil {
-		return errors.Wrap(err, "couldn't run ffmpeg")
-	}
-
-	transcriber := p.getTranscribe()
-	// Limit reader should probably error out instead of just silently failing
-	transcription, err := transcriber.Transcribe(io.LimitReader(audioReader, WhisperAPILimit))
-	if err != nil {
-		return err
-	}
-
-	errout, err := io.ReadAll(errorReader)
-	if err != nil {
-		return errors.Wrap(err, "unable to read stderr from ffmpeg")
-	}
-
-	if err := cmd.Wait(); err != nil {
-		p.pluginAPI.Log.Debug("ffmpeg stderr: " + string(errout))
-		return errors.Wrap(err, "error while waiting for ffmpeg")
-	}
-
-	botPost.Message += "\nRefining transcription..."
-	if err := p.pluginAPI.Post.UpdatePost(botPost); err != nil {
-		return err
-	}
-
-	context := p.MakeConversationContext(nil, channel, nil)
-	context.PromptParameters = map[string]string{"Transcription": transcription}
-	summaryPrompt, err := p.prompts.ChatCompletion(ai.PromptMeetingSummaryOnly, context)
-	if err != nil {
-		return err
-	}
-
-	keyPointsPrompt, err := p.prompts.ChatCompletion(ai.PromptMeetingKeyPoints, context)
-	if err != nil {
-		return err
-	}
-
-	summaryStream, err := p.getLLM().ChatCompletion(summaryPrompt)
-	if err != nil {
-		return err
-	}
-
-	keyPointsStream, err := p.getLLM().ChatCompletion(keyPointsPrompt)
-	if err != nil {
-		return err
-	}
-
-	botPost.Message = ""
-	template := []string{
-		"# Meeting Summary\n",
-		"",
-		"\n## Key Discussion Points\n",
-		"",
-		"\n\n_Summary generated using AI, and may contain inaccuracies. Do not take this summary as absolute truth._",
-	}
-	if err := p.pluginAPI.Post.UpdatePost(botPost); err != nil {
-		return err
-	}
-
-	if err := p.multiStreamResultToPost(botPost, template, summaryStream, keyPointsStream); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (p *Plugin) spellcheckMessage(message string) (*string, error) {
 	context := ai.NewConversationContextParametersOnly(map[string]string{
 		"Message":  message,
@@ -378,7 +286,7 @@ func (p *Plugin) spellcheckMessage(message string) (*string, error) {
 		return nil, err
 	}
 
-	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithmaxTokens(128))
+	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithMaxTokens(128))
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +304,112 @@ func (p *Plugin) changeTone(tone, message string) (*string, error) {
 		return nil, err
 	}
 
-	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithmaxTokens(128))
+	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithMaxTokens(128))
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (p *Plugin) simplifyText(message string) (*string, error) {
+	context := ai.NewConversationContextParametersOnly(map[string]string{
+		"Message": message,
+	})
+	prompt, err := p.prompts.ChatCompletion(ai.PromptSimplifyText, context)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithMaxTokens(128))
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (p *Plugin) aiChangeText(ask, message string) (*string, error) {
+	context := ai.NewConversationContextParametersOnly(map[string]string{
+		"Ask":     ask,
+		"Message": message,
+	})
+	prompt, err := p.prompts.ChatCompletion(ai.PromptAIChangeText, context)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithMaxTokens(128))
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (p *Plugin) summarizeChannelSince(requestingUser *model.User, channel *model.Channel, since int64) (string, error) {
+	posts, err := p.pluginAPI.Post.GetPostsSince(channel.Id, since)
+	if err != nil {
+		return "", err
+	}
+
+	threadData, err := p.getMetadataForPosts(posts)
+	if err != nil {
+		return "", err
+	}
+
+	// Remove deleted posts
+	threadData.Posts = slices.DeleteFunc(threadData.Posts, func(post *model.Post) bool {
+		return post.DeleteAt != 0
+	})
+
+	formattedThread := formatThread(threadData)
+
+	context := ai.NewConversationContext(requestingUser, channel, nil)
+	context.PromptParameters = map[string]string{
+		"Posts": formattedThread,
+	}
+
+	prompt, err := p.prompts.ChatCompletion(ai.PromptSummarizeChannelSince, context)
+	if err != nil {
+		return "", err
+	}
+
+	result, err := p.getLLM().ChatCompletionNoStream(prompt)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
+func (p *Plugin) explainCode(message string) (*string, error) {
+	context := ai.NewConversationContextParametersOnly(map[string]string{
+		"Message": message,
+	})
+	prompt, err := p.prompts.ChatCompletion(ai.PromptExplainCode, context)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := p.getLLM().ChatCompletionNoStream(prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (p *Plugin) suggestCodeImprovements(message string) (*string, error) {
+	context := ai.NewConversationContextParametersOnly(map[string]string{
+		"Message": message,
+	})
+	prompt, err := p.prompts.ChatCompletion(ai.PromptSuggestCodeImprovements, context)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := p.getLLM().ChatCompletionNoStream(prompt)
 	if err != nil {
 		return nil, err
 	}

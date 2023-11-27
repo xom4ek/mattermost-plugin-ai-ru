@@ -8,12 +8,12 @@ import (
 
 	"github.com/google/go-github/v41/github"
 	"github.com/mattermost/mattermost-plugin-ai/server/ai"
-	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/pkg/errors"
 )
 
 type LookupMattermostUserArgs struct {
-	Username string `jsonschema_description:"The username of the user to lookup witout a leading '@'. Example: 'firstname.lastname'"`
+	Username string `jsonschema_description:"The username of the user to lookup without a leading '@'. Example: 'firstname.lastname'"`
 }
 
 func (p *Plugin) toolResolveLookupMattermostUser(context ai.ConversationContext, argsGetter ai.ToolArgumentGetter) (string, error) {
@@ -85,7 +85,7 @@ func (p *Plugin) toolResolveGetChannelPosts(context ai.ConversationContext, args
 		return "internal failure", errors.Wrap(err, "failed to lookup channel by name, may not exist")
 	}
 
-	if err := p.checkUsageRestrictions(context.RequestingUser.Id, channel); err != nil {
+	if err := p.checkUsageRestrictionsForChannel(channel); err != nil {
 		return "user asked for a channel that is blocked by usage restrictions", errors.Wrap(err, "usage restrictions during channel lookup")
 	}
 
@@ -168,7 +168,7 @@ func (p *Plugin) getBuiltInTools() []ai.Tool {
 	} else if status != nil && status.State == model.PluginStateRunning {
 		builtInTools = append(builtInTools, ai.Tool{
 			Name:        "GetGithubIssue",
-			Description: "Retrive a single GitHub issue by owner, repo, and issue number.",
+			Description: "Retrieve a single GitHub issue by owner, repo, and issue number.",
 			Schema:      GetGithubIssueArgs{},
 			Resolver:    p.toolGetGithubIssue,
 		})
