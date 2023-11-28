@@ -27,7 +27,7 @@ const PostMenu = (props: Props) => {
         doSummarize(postId);
     };
 
-    const JiraTicketPost = (teamName: string, postId: string) => {
+    const jiraTicketPost = (teamName: string, postId: string) => {
         window.WebappUtils.browserHistory.push('/' + teamName + '/messages/@' + BotUsername);
         doJiraTicket(postId);
     };
@@ -39,7 +39,7 @@ const PostMenu = (props: Props) => {
         >
             <DropdownMenuItem onClick={() => summarizePost(team.name, post.id)}><span className='icon'><IconThreadSummarization/></span>{'Summarize Thread'}</DropdownMenuItem>
             <DropdownMenuItem onClick={() => doTranscribe(post.id)}><span className='icon'><IconThreadSummarization/></span>{'Summarize Meeting Audio'}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => JiraTicketPost(team.name, post.id)}><span className='icon'><IconThreadSummarization/></span>{'Jira ticket Thread'}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => jiraTicketPost(team.name, post.id)}><span className='icon'><IconThreadSummarization/></span>{'Jira ticket Thread'}</DropdownMenuItem>
             <DropdownMenuItem onClick={() => doReaction(post.id)}><span className='icon'><IconReactForMe/></span>{'React for me'}</DropdownMenuItem>
         </DotMenu>
     );
