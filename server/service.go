@@ -151,9 +151,39 @@ func (p *Plugin) startNewSummaryThread(postIDToSummarize string, context ai.Conv
 	}
 
 	post := &model.Post{
-		Message: fmt.Sprintf("A summary of [this thread](/_redirect/pl/%s):\n", postIDToSummarize),
+		Message: fmt.Sprintf("Summary для [этого треда](/_redirect/pl/%s):\n", postIDToSummarize),
 	}
 	post.AddProp(ThreadIDProp, postIDToSummarize)
+
+	if err := p.streamResultToNewDM(summaryStream, context.RequestingUser.Id, post); err != nil {
+		return "", err
+	}
+
+	return post.Id, nil
+}
+
+func (p *Plugin) startNewJiraTicket(postIDToJiraTicket string, context ai.ConversationContext) (string, error) {
+	threadData, err := p.getThreadAndMeta(postIDToJiraTicket)
+	if err != nil {
+		return "", err
+	}
+
+	formattedThread := formatThread(threadData)
+
+	context.PromptParameters = map[string]string{"Thread": formattedThread}
+	prompt, err := p.prompts.ChatCompletion(ai.PromptJiraTicket, context)
+	if err != nil {
+		return "", err
+	}
+	summaryStream, err := p.getLLM().ChatCompletion(prompt)
+	if err != nil {
+		return "", err
+	}
+
+	post := &model.Post{
+		Message: fmt.Sprintf("JiraTicket для [этого треда](/_redirect/pl/%s):\n", postIDToJiraTicket),
+	}
+	post.AddProp(ThreadIDProp, postIDToJiraTicket)
 
 	if err := p.streamResultToNewDM(summaryStream, context.RequestingUser.Id, post); err != nil {
 		return "", err
@@ -243,6 +273,23 @@ func (p *Plugin) simplifyText(message string) (*string, error) {
 	}
 
 	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithmaxTokens(128))
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (p *Plugin) simpJiraTicketText(message string) (*string, error) {
+	context := ai.NewConversationContextParametersOnly(map[string]string{
+		"Message": message,
+	})
+	prompt, err := p.prompts.ChatCompletion(ai.PromptJiraTicketText, context)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := p.getLLM().ChatCompletionNoStream(prompt, ai.WithmaxTokens(500))
 	if err != nil {
 		return nil, err
 	}

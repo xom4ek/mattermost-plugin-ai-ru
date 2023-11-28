@@ -50,6 +50,23 @@ export async function doSummarize(postid: string) {
     });
 }
 
+export async function doJiraTicket(postid: string) {
+    const url = `${postRoute(postid)}/jiraticket`;
+    const response = await fetch(url, Client4.getOptions({
+        method: 'POST',
+    }));
+
+    if (response.ok) {
+        return;
+    }
+
+    throw new ClientError(Client4.url, {
+        message: '',
+        status_code: response.status,
+        url,
+    });
+}
+
 export async function doFeedback(postid: string, positive: boolean) {
     let url = `${postRoute(postid)}/feedback/`;
 
@@ -93,6 +110,24 @@ export async function doTranscribe(postid: string) {
 
 export async function doSimplify(message: string) {
     const url = `${textRoute()}/simplify`;
+    const response = await fetch(url, Client4.getOptions({
+        method: 'POST',
+        body: JSON.stringify({message}),
+    }));
+
+    if (response.ok) {
+        return response.json();
+    }
+
+    throw new ClientError(Client4.url, {
+        message: '',
+        status_code: response.status,
+        url,
+    });
+}
+
+export async function doSimpJiraTicket(message: string) {
+    const url = `${textRoute()}/simpjiraticket`;
     const response = await fetch(url, Client4.getOptions({
         method: 'POST',
         body: JSON.stringify({message}),

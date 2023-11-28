@@ -28,6 +28,7 @@ type Config struct {
 	AllowPrivateChannels  bool   `json:"allowPrivateChannels"`
 	AllowedTeamIDs        string `json:"allowedTeamIDs"`
 	OnlyUsersOnTeam       string `json:"onlyUsersOnTeam"`
+	CompanyName	          string `json:"CompanyName"`
 }
 
 // configuration captures the plugin's external configuration as exposed in the Mattermost server

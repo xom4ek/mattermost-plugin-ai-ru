@@ -3,7 +3,7 @@ import styled from 'styled-components';
 
 import {Draft} from '@mattermost/types/drafts';
 
-import {doSimplify, doChangeTone, doAskAiChangeText} from '../client';
+import {doSimplify, doChangeTone, doAskAiChangeText, doSimpJiraTicket} from '../client';
 
 import LoadingSpinner from './assets/loading_spinner';
 import IconAI from './assets/icon_ai';
@@ -86,6 +86,26 @@ const EditorMenu = (props: Props) => {
         setProposal(data.message);
     };
 
+    const SimpJiraTicket = async (e?: Event) => {
+        e?.stopPropagation();
+        e?.preventDefault();
+        setCurrentAction('SimpJiraTicket');
+        setGenerating(true);
+        const {start, end} = props.getSelectedText();
+        let text = draft.message;
+        if (start < end) {
+            text = draft.message.substring(start, end);
+        }
+        let data = {message: ''};
+        try {
+            data = await doSimpJiraTicket(text);
+        } catch (err) {
+            setError('Unable to SimpJiraTicket the text');
+        }
+        setGenerating(false);
+        setProposal(data.message);
+    };
+
     const changeToProfessional = async (e?: Event) => {
         e?.stopPropagation();
         e?.preventDefault();
@@ -152,6 +172,12 @@ const EditorMenu = (props: Props) => {
             } catch (e) {
                 setError('Unable to change the text');
             }
+        } else if (currentAction === 'SimpJiraTicket') {
+            try {
+                data = await doSimpJiraTicket(text);
+            } catch (e) {
+                setError('Unable to SimpJiraTicket the text');
+            }
         }
         setGenerating(false);
         setProposal(data.message);
@@ -217,6 +243,9 @@ const EditorMenu = (props: Props) => {
                             askAiChangeText(text);
                         }}
                     />
+                    <DropdownMenuItem onClick={SimpJiraTicket}>
+                        <span className='icon'><IconAI/></span>{'SimpJiraTicket'}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={simplify}>
                         <span className='icon'><IconAI/></span>{'Simplify'}
                     </DropdownMenuItem>

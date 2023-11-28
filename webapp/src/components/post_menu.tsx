@@ -5,7 +5,7 @@ import {GlobalState} from '@mattermost/types/store';
 import {Team} from '@mattermost/types/teams';
 import {Post} from '@mattermost/types/posts';
 
-import {doReaction, doTranscribe, doSummarize} from '../client';
+import {doReaction, doTranscribe, doSummarize, doJiraTicket} from '../client';
 
 import {BotUsername} from '../constants';
 
@@ -27,6 +27,11 @@ const PostMenu = (props: Props) => {
         doSummarize(postId);
     };
 
+    const JiraTicketPost = (teamName: string, postId: string) => {
+        window.WebappUtils.browserHistory.push('/' + teamName + '/messages/@' + BotUsername);
+        doJiraTicket(postId);
+    };
+
     return (
         <DotMenu
             icon={<IconAI/>}
@@ -34,6 +39,7 @@ const PostMenu = (props: Props) => {
         >
             <DropdownMenuItem onClick={() => summarizePost(team.name, post.id)}><span className='icon'><IconThreadSummarization/></span>{'Summarize Thread'}</DropdownMenuItem>
             <DropdownMenuItem onClick={() => doTranscribe(post.id)}><span className='icon'><IconThreadSummarization/></span>{'Summarize Meeting Audio'}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => JiraTicketPost(team.name, post.id)}><span className='icon'><IconThreadSummarization/></span>{'Jira ticket Thread'}</DropdownMenuItem>
             <DropdownMenuItem onClick={() => doReaction(post.id)}><span className='icon'><IconReactForMe/></span>{'React for me'}</DropdownMenuItem>
         </DotMenu>
     );

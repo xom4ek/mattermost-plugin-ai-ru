@@ -101,6 +101,26 @@ func (p *Plugin) handleSummarize(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+func (p *Plugin) handleJiraTicket(c *gin.Context) {
+	userID := c.GetHeader("Mattermost-User-Id")
+	post := c.MustGet(ContextPostKey).(*model.Post)
+	channel := c.MustGet(ContextChannelKey).(*model.Channel)
+
+	user, err := p.pluginAPI.User.Get(userID)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	if _, err := p.startNewJiraTicket(post.Id, p.MakeConversationContext(user, channel, nil)); err != nil {
+		c.AbortWithError(http.StatusInternalServerError, errors.Wrap(err, "Unable to produce JiraTicket"))
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+
 func (p *Plugin) handleTranscribe(c *gin.Context) {
 	post := c.MustGet(ContextPostKey).(*model.Post)
 	channel := c.MustGet(ContextChannelKey).(*model.Channel)

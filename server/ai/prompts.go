@@ -33,6 +33,8 @@ const (
 	PromptSummarizeChunk          = "summarize_chunk"
 	PromptExplainCode             = "explain_code"
 	PromptSuggestCodeImprovements = "suggest_code_improvements"
+	PromptJiraTicket              = "jira_ticket"
+	PromptJiraTicketText          = "jira_ticket_text"
 )
 
 func NewPrompts(input fs.FS, getBuiltInTools func() []Tool) (*Prompts, error) {

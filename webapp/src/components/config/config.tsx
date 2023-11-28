@@ -20,6 +20,7 @@ type Value = {
     allowPrivateChannels: boolean
     allowedTeamIds: string
     onlyUsersOnTeam: string
+    CompanyName: string
 }
 
 type Props = {
@@ -57,6 +58,7 @@ const defaultConfig = {
     allowPrivateChannels: false,
     allowedTeamIds: '',
     onlyUsersOnTeam: '',
+    CompanyName: '',
 };
 
 const Config = (props: Props) => {

@@ -12,7 +12,7 @@ import CodeMenu from './components/code_menu';
 import IconThreadSummarization from './components/assets/icon_thread_summarization';
 import IconReactForMe from './components/assets/icon_react_for_me';
 import Config from './components/config/config';
-import {doReaction, doSummarize, doTranscribe} from './client';
+import {doReaction, doSummarize, doJiraTicket, doTranscribe} from './client';
 import {BotUsername} from './constants';
 
 export default class Plugin {
@@ -27,6 +27,12 @@ export default class Plugin {
                 const team = state.entities.teams.teams[state.entities.teams.currentTeamId];
                 window.WebappUtils.browserHistory.push('/' + team.name + '/messages/@' + BotUsername);
                 doSummarize(postId);
+            });
+            registry.registerPostDropdownMenuAction(<><span className='icon'><IconReactForMe/></span>{'Jira ticket Thread'}</>, (postId: string) => {
+                const state = store.getState();
+                const team = state.entities.teams.teams[state.entities.teams.currentTeamId];
+                window.WebappUtils.browserHistory.push('/' + team.name + '/messages/@' + BotUsername);
+                doJiraTicket(postId);
             });
             registry.registerPostDropdownMenuAction(<><span className='icon'><IconThreadSummarization/></span>{'Summarize Meeting Audio'}</>, doTranscribe);
             registry.registerPostDropdownMenuAction(<><span className='icon'><IconReactForMe/></span>{'React for me'}</>, doReaction);

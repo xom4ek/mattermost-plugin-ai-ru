@@ -37,6 +37,27 @@ func (p *Plugin) handleSimplify(c *gin.Context) {
 	c.Render(200, render.JSON{Data: data})
 }
 
+func (p *Plugin) handleSimpJiraTicket(c *gin.Context) {
+	data := struct {
+		Message string `json:"message"`
+	}{}
+
+	err := json.NewDecoder(c.Request.Body).Decode(&data)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	defer c.Request.Body.Close()
+
+	newMessage, err := p.simpJiraTicketText(data.Message)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	data.Message = *newMessage
+	c.Render(200, render.JSON{Data: data})
+}
+
 func (p *Plugin) handleChangeTone(c *gin.Context) {
 	tone := c.Param("tone")
 

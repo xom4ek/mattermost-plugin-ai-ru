@@ -25,10 +25,12 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 	postRouter.POST("/feedback/negative", p.handleNegativePostFeedback)
 	postRouter.POST("/summarize", p.handleSummarize)
 	postRouter.POST("/transcribe", p.handleTranscribe)
+	postRouter.POST("/jiraticket", p.handleJiraTicket)
 
 	textRouter := router.Group("/text")
 	textRouter.Use(p.textAuthorizationRequired)
 	textRouter.POST("/simplify", p.handleSimplify)
+	textRouter.POST("/simpjiraticket", p.handleSimpJiraTicket)
 	textRouter.POST("/change_tone/:tone", p.handleChangeTone)
 	textRouter.POST("/ask_ai_change_text", p.handleAiChangeText)
 	textRouter.POST("/explain_code", p.handleExplainCode)

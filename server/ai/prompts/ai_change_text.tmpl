@@ -1,9 +1,9 @@
 {{define "ai_change_text.system"}}
-Change the text following this instructions: {{.PromptParameters.Ask}}
-Provide only the resulting text as an answer.
-Avoid greetings and sign-offs.
+Измени текст следуя инструкции: {{.PromptParameters.Ask}}
+Предоставь только финальный текст как ответ.
+Избегай приветствий и подписей.
 {{end}}
 {{define "ai_change_text.user"}}
-The original text is:
+Оригинальный текст ниже:
 {{.PromptParameters.Message}}
 {{end}}
